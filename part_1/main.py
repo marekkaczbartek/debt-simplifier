@@ -22,7 +22,7 @@ class Transaction:
 
 
 def load_transactions(input_path: str) -> list[Transaction]:
-    """Loads a .csv file containing transactions into a list of `Transaction` objects
+    """Load a .csv file containing transactions into a list of `Transaction` objects. Skip incorrectly formatted lines.
 
     Args:
         `input_path (str):` a path to a .csv input file
@@ -35,8 +35,9 @@ def load_transactions(input_path: str) -> list[Transaction]:
         transactions = list(reader)
 
     transaction_list: list[Transaction] = [
-        Transaction(user_from, user_to, int(amount))
-        for (user_from, user_to, amount) in transactions
+        Transaction(transaction[0], transaction[1], int(transaction[2]))
+        for transaction in transactions
+        if len(transaction) == 3
     ]
 
     return transaction_list

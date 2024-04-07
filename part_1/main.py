@@ -13,16 +13,15 @@ class Transaction:
         return f"{self.user_from} - {self.user_to} - {self.amount}"
 
 
-def load_transactions(absolute_path: str) -> list[Transaction]:
-    with open(absolute_path) as f:
+def load_transactions(input_path: str) -> list[Transaction]:
+    with open(input_path) as f:
         reader = csv.reader(f)
         transactions = list(reader)
 
-    transaction_list: list[Transaction] = []
-
-    for transaction in transactions:
-        user_from, user_to, amount = transaction
-        transaction_list.append(Transaction(user_from, user_to, int(amount)))
+    transaction_list: list[Transaction] = [
+        Transaction(user_from, user_to, int(amount))
+        for (user_from, user_to, amount) in transactions
+    ]
 
     return transaction_list
 
@@ -43,35 +42,51 @@ def calculate_balance(transaction_list: list[Transaction]) -> dict[str, int]:
 
 def calculate_transactions(balance_dict: dict[str, int]) -> list[Transaction]:
     transactions: list[Transaction] = []
-    for i, (name, amount) in islice(
+    for i, (curr_name, curr_amount) in islice(
         enumerate(balance_dict.items()), 0, len(balance_dict) - 1
     ):
-        for n in islice(balance_dict, i + 1, len(balance_dict)):
-            a = balance_dict[n]
-            if amount * a < 0:
-                if amount < a:
-                    transactions.append(Transaction(name, n, abs(amount)))
+        # if amount != 0:
+        for name, amount in islice(balance_dict.items(), i + 1, len(balance_dict)):
+            if curr_amount * amount < 0:
+                if curr_amount < amount:
+                    transactions.append(Transaction(curr_name, name, abs(curr_amount)))
                 else:
-                    transactions.append(Transaction(n, name, abs(amount)))
-                balance_dict[n] += amount
+                    transactions.append(Transaction(name, curr_name, abs(curr_amount)))
+                balance_dict[name] += curr_amount
                 break
     return transactions
 
 
-if __name__ == "__main__":
+def save_transactions(transactions: list[Transaction], output_path: str) -> None:
+    with open(output_path, "w") as f:
+        writer = csv.writer(f)
+        for transaction in transactions:
+            writer.writerow(
+                [transaction.user_from, transaction.user_to, str(transaction.amount)]
+            )
+
+
+def main():
     parser: ArgumentParser = ArgumentParser(
         formatter_class=ArgumentDefaultsHelpFormatter
     )
 
     parser.add_argument(
-        "filename",
+        "input_filename", help="A path to a .csv file containing input transactions"
+    )
+    parser.add_argument(
+        "output_filename",
+        help="A path to a .csv file, where the output transactions are supposed to be stored",
     )
 
-    filename = parser.parse_args().filename
-    # filename = "/home/bartek/projects/ocado-cloud-recruitment/test_data/debts_1.csv"
+    args = parser.parse_args()
 
-    transactions = load_transactions(filename)
+    transactions = load_transactions(args.input_filename)
     balance = calculate_balance(transactions)
+
     new_transactions = calculate_transactions(balance)
-    for t in new_transactions:
-        print(t)
+    save_transactions(new_transactions, args.output_filename)
+
+
+if __name__ == "__main__":
+    main()
